@@ -2,1216 +2,975 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Retro Bowl - Franchise & Arcade Football</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Neon Tetris Arcade</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        retroGreen: '#2e8b57',
-                        retroDarkGreen: '#20663f',
-                        retroGold: '#f1c40f',
-                        retroRed: '#e74c3c',
-                        retroBlue: '#3498db',
-                        retroDark: '#121212',
-                        retroPanel: '#1a1a24'
-                    },
-                    fontFamily: {
-                        mono: ['Courier New', 'Monaco', 'monospace']
-                    }
-                }
-            }
-        }
-    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <style>
-        * {
+        :root {
+            --bg-color: #08090f;
+            --panel-bg: rgba(18, 22, 36, 0.75);
+            --cyan-glow: #00f0ff;
+            --magenta-glow: #ff0055;
+            --purple-glow: #a000ff;
+            --yellow-glow: #ffea00;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(circle at 50% 20%, rgba(160, 0, 255, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(0, 240, 255, 0.1) 0%, transparent 40%);
+            font-family: 'Inter', sans-serif;
+            color: #ffffff;
+            touch-action: manipulation;
             user-select: none;
             -webkit-user-select: none;
-            touch-action: manipulation;
-        }
-        body {
-            background-color: #0d0d11;
-            color: #f0f0f0;
-            font-family: 'Courier New', Courier, monospace;
             overflow-x: hidden;
         }
-        .pixel-border {
-            border: 4px solid #fff;
-            box-shadow: 4px 4px 0px #000;
+
+        .font-arcade {
+            font-family: 'Orbitron', monospace;
         }
-        .pixel-btn {
-            box-shadow: 0 4px 0 #000;
-            transition: transform 0.05s, box-shadow 0.05s;
+
+        .neon-text-cyan {
+            color: var(--cyan-glow);
+            text-shadow: 0 0 8px rgba(0, 240, 255, 0.6), 0 0 20px rgba(0, 240, 255, 0.3);
         }
-        .pixel-btn:active {
-            transform: translateY(4px);
-            box-shadow: 0 0 0 #000;
+
+        .neon-text-magenta {
+            color: var(--magenta-glow);
+            text-shadow: 0 0 8px rgba(255, 0, 85, 0.6), 0 0 20px rgba(255, 0, 85, 0.3);
         }
-        .scanlines {
-            background: linear-gradient(
-                rgba(18, 16, 16, 0) 50%, 
-                rgba(0, 0, 0, 0.25) 50%
-            );
-            background-size: 100% 4px;
+
+        .neon-panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5),
+                        inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+        }
+
+        .neon-box-cyan {
+            border: 1px solid rgba(0, 240, 255, 0.4);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+        }
+
+        .canvas-container {
+            position: relative;
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.15), 0 0 60px rgba(160, 0, 255, 0.1);
+            border: 2px solid rgba(0, 240, 255, 0.5);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        #gameCanvas {
+            background-color: rgba(5, 6, 10, 0.95);
+            display: block;
+        }
+
+        #particleCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
             pointer-events: none;
         }
-        canvas {
-            image-rendering: pixelated;
-            image-rendering: crisp-edges;
+
+        .arcade-btn {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03));
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.15s ease;
         }
-        /* Custom scrollbar for retro menus */
+
+        .arcade-btn:active {
+            transform: scale(0.92);
+            background: rgba(0, 240, 255, 0.25);
+            border-color: var(--cyan-glow);
+            box-shadow: 0 0 15px var(--cyan-glow);
+        }
+
+        /* Glassmorphic overlays */
+        .overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(8, 9, 15, 0.85);
+            backdrop-filter: blur(8px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            transition: opacity 0.3s ease;
+        }
+
+        /* Custom scrollbar */
         ::-webkit-scrollbar {
-            width: 8px;
+            width: 6px;
         }
         ::-webkit-scrollbar-track {
-            background: #1a1a24;
+            background: var(--bg-color);
         }
         ::-webkit-scrollbar-thumb {
-            background: #f1c40f;
-            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
         }
     </style>
 </head>
-<body class="flex flex-col items-center justify-center min-h-screen p-2 sm:p-4 bg-retroDark text-white">
+<body class="min-h-screen flex flex-col justify-between items-center p-2 sm:p-4">
 
-    <div id="app-wrapper" class="w-full max-w-5xl bg-retroPanel border-4 border-yellow-500 rounded-lg p-3 sm:p-5 shadow-2xl relative overflow-hidden">
+    <!-- Header -->
+    <header class="w-full max-w-4xl flex justify-between items-center mb-3 sm:mb-6 px-2">
+        <div class="flex items-center gap-3">
+            <i class="fa-solid fa-cubes-stacked text-2xl sm:text-3xl neon-text-cyan"></i>
+            <h1 class="text-2xl sm:text-4xl font-black font-arcade tracking-wider neon-text-cyan">
+                NEON<span class="neon-text-magenta">TETRIS</span>
+            </h1>
+        </div>
+        <div class="flex items-center gap-2 sm:gap-3">
+            <button id="audioBtn" class="arcade-btn p-2 sm:px-3 sm:py-2 rounded-lg font-arcade text-xs sm:text-sm flex items-center gap-2 text-cyan-400">
+                <i id="audioIcon" class="fa-solid fa-volume-high"></i>
+                <span class="hidden sm:inline">SOUND</span>
+            </button>
+            <button id="pauseBtn" class="arcade-btn p-2 sm:px-3 sm:py-2 rounded-lg font-arcade text-xs sm:text-sm flex items-center gap-2 text-amber-400">
+                <i id="pauseIcon" class="fa-solid fa-pause"></i>
+                <span class="hidden sm:inline">PAUSE</span>
+            </button>
+            <button id="restartBtn" class="arcade-btn p-2 sm:px-3 sm:py-2 rounded-lg font-arcade text-xs sm:text-sm flex items-center gap-2 text-rose-400">
+                <i class="fa-solid fa-rotate-right"></i>
+                <span class="hidden sm:inline">RESET</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Game Container -->
+    <main class="w-full max-w-4xl flex flex-col md:flex-row gap-4 justify-center items-center md:items-start my-auto">
         
-        <!-- CRT Overlay lines -->
-        <div class="absolute inset-0 scanlines z-50 pointer-events-none opacity-40"></div>
-
-        <header class="flex flex-wrap items-center justify-between border-b-4 border-yellow-500 pb-3 mb-4 gap-2">
-            <div class="flex items-center space-x-3">
-                <span class="text-2xl sm:text-3xl font-black text-yellow-400 tracking-wider">RETRO BOWL</span>
-                <span id="header-team-badge" class="px-2 py-1 bg-blue-600 text-xs sm:text-sm font-bold rounded pixel-border">
-                    BOSTON (12-2)
-                </span>
-            </div>
-            <div class="flex items-center space-x-4 text-xs sm:text-base font-bold">
-                <div class="bg-gray-900 px-3 py-1.5 rounded-lg border-2 border-yellow-400 flex items-center space-x-1">
-                    <span class="text-yellow-400">CC:</span>
-                    <span id="cc-display" class="text-white">15</span>
+        <!-- Left Sidebar: Hold Piece & Controls -->
+        <aside class="w-full md:w-44 flex md:flex-col justify-between md:justify-start gap-3 order-2 md:order-1">
+            <!-- Hold Panel -->
+            <div class="neon-panel p-3 sm:p-4 rounded-xl flex-1 md:flex-none flex flex-col items-center">
+                <h2 class="text-xs font-arcade font-bold text-gray-400 mb-2 tracking-widest">HOLD</h2>
+                <div class="w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center bg-black/40 rounded-lg border border-white/5">
+                    <canvas id="holdCanvas" width="96" height="96"></canvas>
                 </div>
-                <div class="bg-gray-900 px-3 py-1.5 rounded-lg border-2 border-green-500 flex items-center space-x-1">
-                    <span class="text-green-400">WEEK:</span>
-                    <span id="week-display" class="text-white">1</span>
+                <p class="text-[10px] text-gray-400 mt-2 font-arcade hidden md:block text-center">PRESS 'C' OR SHIFT</p>
+            </div>
+
+            <!-- Stats Panel (High Score) -->
+            <div class="neon-panel p-3 sm:p-4 rounded-xl flex-1 md:flex-none flex flex-col items-center justify-center">
+                <h2 class="text-xs font-arcade font-bold text-yellow-400 mb-1 tracking-widest flex items-center gap-1">
+                    <i class="fa-solid fa-trophy text-xs"></i> HIGH SCORE
+                </h2>
+                <span id="highScoreVal" class="text-lg sm:text-xl font-black font-arcade text-white">0</span>
+            </div>
+
+            <!-- Desktop Controls Help -->
+            <div class="neon-panel p-3 rounded-xl hidden md:block text-xs text-gray-400 space-y-1.5 font-arcade">
+                <div class="text-[10px] font-bold text-cyan-400 mb-1 border-b border-white/10 pb-1">CONTROLS</div>
+                <div class="flex justify-between"><span>Move:</span><span class="text-white">← / →</span></div>
+                <div class="flex justify-between"><span>Rotate:</span><span class="text-white">↑ / Z / X</span></div>
+                <div class="flex justify-between"><span>Soft Drop:</span><span class="text-white">↓</span></div>
+                <div class="flex justify-between"><span>Hard Drop:</span><span class="text-white">SPACE</span></div>
+                <div class="flex justify-between"><span>Hold Piece:</span><span class="text-white">C / SHIFT</span></div>
+            </div>
+        </aside>
+
+        <!-- Center Game Board Canvas -->
+        <section class="relative order-1 md:order-2">
+            <div class="canvas-container rounded-xl">
+                <canvas id="gameCanvas" width="300" height="600" class="w-[260px] h-[520px] sm:w-[300px] sm:h-[600px]"></canvas>
+                <canvas id="particleCanvas" width="300" height="600" class="w-[260px] h-[520px] sm:w-[300px] sm:h-[600px]"></canvas>
+
+                <!-- Pause Overlay -->
+                <div id="pauseOverlay" class="overlay hidden">
+                    <i class="fa-solid fa-circle-pause text-5xl text-amber-400 mb-3 animate-pulse"></i>
+                    <h2 class="text-2xl font-black font-arcade text-white mb-1">GAME PAUSED</h2>
+                    <p class="text-xs text-gray-400 font-arcade mb-6">PRESS 'P' OR BUTTON TO RESUME</p>
+                    <button id="resumeBtn" class="arcade-btn px-6 py-2.5 rounded-lg font-arcade text-sm text-cyan-400 font-bold border-cyan-500/50">
+                        RESUME GAME
+                    </button>
+                </div>
+
+                <!-- Game Over Overlay -->
+                <div id="gameOverOverlay" class="overlay hidden">
+                    <i class="fa-solid fa-skull-crossbones text-5xl text-rose-500 mb-3 animate-bounce"></i>
+                    <h2 class="text-3xl font-black font-arcade text-rose-500 mb-1">GAME OVER</h2>
+                    <p id="finalScoreMsg" class="text-sm text-gray-300 font-arcade mb-1">SCORE: 0</p>
+                    <p id="newHighMsg" class="text-xs text-yellow-400 font-arcade mb-6 hidden">NEW HIGH SCORE!</p>
+                    <button id="playAgainBtn" class="arcade-btn px-6 py-3 rounded-lg font-arcade text-sm text-cyan-400 font-bold border-cyan-500/50 bg-cyan-950/30">
+                        PLAY AGAIN
+                    </button>
                 </div>
             </div>
-        </header>
+        </section>
 
-        <nav id="nav-tabs" class="flex flex-wrap gap-2 mb-4">
-            <button onclick="switchTab('OFFICE')" id="tab-OFFICE" class="pixel-btn bg-yellow-500 hover:bg-yellow-400 text-black font-extrabold px-3 py-2 text-xs sm:text-sm rounded">OFFICE</button>
-            <button onclick="switchTab('ROSTER')" id="tab-ROSTER" class="pixel-btn bg-gray-700 hover:bg-gray-600 text-white font-extrabold px-3 py-2 text-xs sm:text-sm rounded">ROSTER</button>
-            <button onclick="switchTab('FACILITIES')" id="tab-FACILITIES" class="pixel-btn bg-gray-700 hover:bg-gray-600 text-white font-extrabold px-3 py-2 text-xs sm:text-sm rounded">FACILITIES</button>
-            <button onclick="switchTab('SCHEDULE')" id="tab-SCHEDULE" class="pixel-btn bg-gray-700 hover:bg-gray-600 text-white font-extrabold px-3 py-2 text-xs sm:text-sm rounded">SCHEDULE</button>
-            <button onclick="startPlayGame()" class="pixel-btn bg-green-600 hover:bg-green-500 text-white font-black px-4 py-2 text-xs sm:text-sm rounded ml-auto animate-pulse">PLAY MATCH</button>
-        </nav>
-
-        <main id="tab-content" class="min-h-[420px] relative">
-            
-            <!-- VIEW: FRONT OFFICE -->
-            <div id="view-OFFICE" class="tab-view space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <!-- Team Overview Card -->
-                    <div class="bg-gray-900 p-4 rounded-lg border-2 border-gray-700 flex flex-col justify-between">
-                        <div>
-                            <h3 class="text-lg font-bold text-yellow-400 mb-2 border-b border-gray-700 pb-1">FRANCHISE OVERVIEW</h3>
-                            <p class="text-sm mb-1">Team: <span id="office-team-name" class="font-bold text-blue-400">Boston Chargers</span></p>
-                            <p class="text-sm mb-1">Coach Morale: <span id="office-morale" class="text-green-400 font-bold">92%</span></p>
-                            <p class="text-sm mb-1">Fans Rating: <span id="office-fans" class="text-yellow-400 font-bold">88%</span></p>
-                            <p class="text-sm">Salary Cap: <span class="text-white font-bold">$120M / $150M</span></p>
-                        </div>
-                        <div class="mt-4 pt-3 border-t border-gray-800 text-xs text-gray-400">
-                            Win games to boost fan approval and earn Coaching Credits (CC) to upgrade facilities and star players!
-                        </div>
-                    </div>
-
-                    <!-- Next Opponent Card -->
-                    <div class="bg-gray-900 p-4 rounded-lg border-2 border-gray-700 flex flex-col justify-between">
-                        <div>
-                            <h3 class="text-lg font-bold text-yellow-400 mb-2 border-b border-gray-700 pb-1">NEXT MATCHUP</h3>
-                            <div class="flex items-center justify-between my-3">
-                                <div class="text-center">
-                                    <div class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-xl font-black mx-auto mb-1 border-2 border-white" id="home-icon">BOS</div>
-                                    <span class="text-xs font-bold">YOU</span>
-                                </div>
-                                <span class="text-2xl font-black text-yellow-400">VS</span>
-                                <div class="text-center">
-                                    <div class="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center text-xl font-black mx-auto mb-1 border-2 border-white" id="opp-icon">NY</div>
-                                    <span id="opp-name-badge" class="text-xs font-bold text-red-400">NEW YORK</span>
-                                </div>
-                            </div>
-                            <p class="text-xs text-center text-gray-300">Opponent Offense: <span id="opp-off-stars" class="text-yellow-400">★★★★☆</span></p>
-                            <p class="text-xs text-center text-gray-300">Opponent Defense: <span id="opp-def-stars" class="text-yellow-400">★★★☆☆</span></p>
-                        </div>
-                        <button onclick="startPlayGame()" class="pixel-btn w-full mt-4 bg-green-600 hover:bg-green-500 text-black font-black py-2 rounded text-center">PLAY WEEK MATCH</button>
-                    </div>
-
-                    <!-- Coaching Credits Shop Card -->
-                    <div class="bg-gray-900 p-4 rounded-lg border-2 border-gray-700 flex flex-col justify-between">
-                        <div>
-                            <h3 class="text-lg font-bold text-yellow-400 mb-2 border-b border-gray-700 pb-1">COACHING CREDITS</h3>
-                            <p class="text-xs text-gray-300 mb-3">Earn CC by winning matches and keeping fan support high.</p>
-                            <div class="space-y-2">
-                                <button onclick="buyCC(50)" class="pixel-btn w-full bg-yellow-600 hover:bg-yellow-500 text-black font-bold p-2 text-xs rounded flex justify-between">
-                                    <span>Booster Pack (+10 CC)</span>
-                                    <span>FREE DEMO</span>
-                                </button>
-                                <button onclick="claimSponsorBonus()" class="pixel-btn w-full bg-blue-600 hover:bg-blue-500 text-white font-bold p-2 text-xs rounded flex justify-between">
-                                    <span>Sponsor Payout</span>
-                                    <span>+3 CC</span>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="mt-4 text-xs text-gray-400 bg-gray-800 p-2 rounded">
-                            Tip: Keep Stadium upgraded so fan morale stays high after tough losses!
-                        </div>
-                    </div>
+        <!-- Right Sidebar: Next Piece, Score, Level, Lines -->
+        <aside class="w-full md:w-44 flex md:flex-col justify-between md:justify-start gap-3 order-3">
+            <!-- Next Panel -->
+            <div class="neon-panel p-3 sm:p-4 rounded-xl flex-1 md:flex-none flex flex-col items-center">
+                <h2 class="text-xs font-arcade font-bold text-gray-400 mb-2 tracking-widest">NEXT</h2>
+                <div class="w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center bg-black/40 rounded-lg border border-white/5">
+                    <canvas id="nextCanvas" width="96" height="96"></canvas>
                 </div>
             </div>
 
-            <!-- VIEW: ROSTER MANAGEMENT -->
-            <div id="view-ROSTER" class="tab-view hidden space-y-4">
-                <div class="flex justify-between items-center bg-gray-900 p-3 rounded-lg border border-gray-700">
-                    <h3 class="text-lg font-bold text-yellow-400">STAR PLAYER ROSTER</h3>
-                    <span class="text-xs text-gray-400">Click player to upgrade attributes with CC</span>
+            <!-- Stats Stack -->
+            <div class="neon-panel p-3 sm:p-4 rounded-xl flex-1 md:flex-none flex flex-col gap-3">
+                <div class="text-center">
+                    <h3 class="text-[10px] font-arcade font-bold text-gray-400 tracking-wider mb-0.5">SCORE</h3>
+                    <span id="scoreVal" class="text-lg sm:text-2xl font-black font-arcade neon-text-cyan">0</span>
                 </div>
-                <div id="roster-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    <!-- Dynamic Star Players Injection -->
-                </div>
-            </div>
-
-            <!-- VIEW: FACILITIES -->
-            <div id="view-FACILITIES" class="tab-view hidden space-y-4">
-                <h3 class="text-lg font-bold text-yellow-400 bg-gray-900 p-3 rounded-lg border border-gray-700">TEAM FACILITIES</h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <!-- Stadium -->
-                    <div class="bg-gray-900 p-4 rounded-lg border-2 border-gray-700 text-center flex flex-col justify-between">
-                        <div>
-                            <div class="text-4xl mb-2">🏟️</div>
-                            <h4 class="font-bold text-yellow-400">STADIUM</h4>
-                            <p class="text-xs text-gray-300 my-2">Boosts Fan Morale and earns higher CC payouts after home wins.</p>
-                            <div class="text-sm font-bold text-green-400 mb-3" id="facility-stadium-lvl">Level 2 / 5</div>
-                        </div>
-                        <button onclick="upgradeFacility('stadium')" class="pixel-btn bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-2 px-4 text-xs rounded">UPGRADE (4 CC)</button>
+                <div class="flex justify-around md:flex-col md:gap-3 border-t border-white/10 pt-2 md:pt-0 md:border-none">
+                    <div class="text-center">
+                        <h3 class="text-[10px] font-arcade font-bold text-gray-400 tracking-wider mb-0.5">LEVEL</h3>
+                        <span id="levelVal" class="text-base sm:text-xl font-bold font-arcade text-purple-400">1</span>
                     </div>
-
-                    <!-- Training Facility -->
-                    <div class="bg-gray-900 p-4 rounded-lg border-2 border-gray-700 text-center flex flex-col justify-between">
-                        <div>
-                            <div class="text-4xl mb-2">🏋️‍♂️</div>
-                            <h4 class="font-bold text-yellow-400">TRAINING FACILITY</h4>
-                            <p class="text-xs text-gray-300 my-2">Increases Player XP gains per match to unlock stat upgrades faster.</p>
-                            <div class="text-sm font-bold text-green-400 mb-3" id="facility-training-lvl">Level 1 / 5</div>
-                        </div>
-                        <button onclick="upgradeFacility('training')" class="pixel-btn bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-2 px-4 text-xs rounded">UPGRADE (4 CC)</button>
-                    </div>
-
-                    <!-- Rehab Center -->
-                    <div class="bg-gray-900 p-4 rounded-lg border-2 border-gray-700 text-center flex flex-col justify-between">
-                        <div>
-                            <div class="text-4xl mb-2">🏥</div>
-                            <h4 class="font-bold text-yellow-400">REHAB CENTER</h4>
-                            <p class="text-xs text-gray-300 my-2">Restores player stamina between games and reduces injury duration.</p>
-                            <div class="text-sm font-bold text-green-400 mb-3" id="facility-rehab-lvl">Level 1 / 5</div>
-                        </div>
-                        <button onclick="upgradeFacility('rehab')" class="pixel-btn bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-2 px-4 text-xs rounded">UPGRADE (4 CC)</button>
+                    <div class="text-center">
+                        <h3 class="text-[10px] font-arcade font-bold text-gray-400 tracking-wider mb-0.5">LINES</h3>
+                        <span id="linesVal" class="text-base sm:text-xl font-bold font-arcade text-emerald-400">0</span>
                     </div>
                 </div>
             </div>
+        </aside>
+    </main>
 
-            <!-- VIEW: SCHEDULE & STANDINGS -->
-            <div id="view-SCHEDULE" class="tab-view hidden space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- Schedule -->
-                    <div class="bg-gray-900 p-3 rounded-lg border border-gray-700">
-                        <h3 class="text-md font-bold text-yellow-400 mb-2 border-b border-gray-700 pb-1">18-WEEK SCHEDULE</h3>
-                        <div id="schedule-list" class="space-y-1.5 max-h-[340px] overflow-y-auto pr-1 text-xs">
-                            <!-- Dynamic schedule injection -->
-                        </div>
-                    </div>
-                    <!-- Standings -->
-                    <div class="bg-gray-900 p-3 rounded-lg border border-gray-700">
-                        <h3 class="text-md font-bold text-yellow-400 mb-2 border-b border-gray-700 pb-1">LEAGUE STANDINGS</h3>
-                        <div id="standings-list" class="space-y-1.5 max-h-[340px] overflow-y-auto pr-1 text-xs">
-                            <!-- Dynamic standings injection -->
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <!-- Mobile On-Screen Touch Controls -->
+    <section class="w-full max-w-md mt-4 md:hidden px-2 space-y-2">
+        <div class="grid grid-cols-5 gap-2">
+            <button id="btnHold" class="arcade-btn p-3 rounded-xl flex flex-col items-center justify-center text-amber-400">
+                <i class="fa-solid fa-box-archive text-lg"></i>
+                <span class="text-[9px] font-arcade mt-1">HOLD</span>
+            </button>
+            <button id="btnRotCCW" class="arcade-btn p-3 rounded-xl flex flex-col items-center justify-center text-purple-400">
+                <i class="fa-solid fa-rotate-left text-lg"></i>
+                <span class="text-[9px] font-arcade mt-1">CCW</span>
+            </button>
+            <button id="btnRotCW" class="arcade-btn p-3 rounded-xl flex flex-col items-center justify-center text-purple-400">
+                <i class="fa-solid fa-rotate-right text-lg"></i>
+                <span class="text-[9px] font-arcade mt-1">CW</span>
+            </button>
+            <button id="btnSoftDrop" class="arcade-btn p-3 rounded-xl flex flex-col items-center justify-center text-cyan-400">
+                <i class="fa-solid fa-angle-down text-lg"></i>
+                <span class="text-[9px] font-arcade mt-1">SOFT</span>
+            </button>
+            <button id="btnHardDrop" class="arcade-btn p-3 rounded-xl flex flex-col items-center justify-center text-rose-400">
+                <i class="fa-solid fa-angles-down text-lg"></i>
+                <span class="text-[9px] font-arcade mt-1">DROP</span>
+            </button>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+            <button id="btnLeft" class="arcade-btn py-3.5 rounded-xl flex items-center justify-center text-cyan-400 text-xl">
+                <i class="fa-solid fa-caret-left"></i>
+            </button>
+            <button id="btnRight" class="arcade-btn py-3.5 rounded-xl flex items-center justify-center text-cyan-400 text-xl">
+                <i class="fa-solid fa-caret-right"></i>
+            </button>
+        </div>
+    </section>
 
-            <!-- VIEW: ON-FIELD GAME CANVAS (ACTIVE MATCH) -->
-            <div id="view-GAME" class="tab-view hidden flex flex-col items-center">
-                
-                <!-- Game HUD Bar -->
-                <div class="w-full bg-black border-2 border-gray-700 rounded-t-lg p-2 flex flex-wrap items-center justify-between text-xs sm:text-sm font-bold gap-2">
-                    <div class="flex items-center space-x-2">
-                        <span id="hud-home-team" class="text-blue-400">BOS</span>
-                        <span id="hud-home-score" class="text-xl text-yellow-400">0</span>
-                        <span class="text-gray-500">-</span>
-                        <span id="hud-away-score" class="text-xl text-yellow-400">0</span>
-                        <span id="hud-away-team" class="text-red-400">NY</span>
-                    </div>
-
-                    <div class="flex items-center space-x-3 bg-gray-900 px-3 py-1 rounded border border-gray-800">
-                        <span id="hud-qtr" class="text-green-400">Q1</span>
-                        <span id="hud-clock" class="text-white">2:00</span>
-                    </div>
-
-                    <div class="flex items-center space-x-2">
-                        <span id="hud-down" class="text-yellow-400">1ST & 10</span>
-                        <span id="hud-ball-pos" class="text-gray-300">AT BOS 20</span>
-                    </div>
-                </div>
-
-                <!-- Main Field Canvas -->
-                <div class="relative w-full overflow-hidden border-x-2 border-b-2 border-gray-700 bg-green-800">
-                    <canvas id="gameCanvas" width="800" height="420" class="w-full h-auto cursor-crosshair block"></canvas>
-                    
-                    <!-- Pre-Snap Play Overlay Modal -->
-                    <div id="playbook-overlay" class="absolute inset-0 bg-black/80 flex flex-col items-center justify-center p-4 z-20">
-                        <h3 class="text-yellow-400 font-extrabold text-lg sm:text-xl mb-3">SELECT PLAY</h3>
-                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 w-full max-w-lg mb-4">
-                            <button onclick="selectPlay('RUN_INSIDE')" class="pixel-btn bg-yellow-600 hover:bg-yellow-500 text-black font-bold p-2 text-xs rounded border border-white">
-                                🏃 INSIDE RUN<br><span class="text-[10px] text-gray-200">Safe Yardage</span>
-                            </button>
-                            <button onclick="selectPlay('PASS_SLANT')" class="pixel-btn bg-blue-600 hover:bg-blue-500 text-white font-bold p-2 text-xs rounded border border-white">
-                                🏈 QUICK SLANTS<br><span class="text-[10px] text-gray-200">Short Pass</span>
-                            </button>
-                            <button onclick="selectPlay('PASS_DEEP')" class="pixel-btn bg-red-600 hover:bg-red-500 text-white font-bold p-2 text-xs rounded border border-white">
-                                🚀 DEEP POST<br><span class="text-[10px] text-gray-200">Big Gain</span>
-                            </button>
-                            <button onclick="selectPlay('FIELD_GOAL')" class="pixel-btn bg-purple-600 hover:bg-purple-500 text-white font-bold p-2 text-xs rounded border border-white">
-                                🦶 FIELD GOAL<br><span class="text-[10px] text-gray-200">3 Points</span>
-                            </button>
-                        </div>
-                        <div class="flex items-center space-x-3">
-                            <button onclick="useAudible()" id="btn-audible" class="pixel-btn bg-gray-700 hover:bg-gray-600 text-yellow-400 font-bold px-3 py-1.5 text-xs rounded">AUDIBLE (3 LEFT)</button>
-                            <button onclick="snapBall()" class="pixel-btn bg-green-500 hover:bg-green-400 text-black font-extrabold px-6 py-2 text-sm rounded animate-bounce">SNAP BALL</button>
-                        </div>
-                    </div>
-
-                    <!-- Kicking Minigame Overlay -->
-                    <div id="kicking-overlay" class="absolute inset-0 bg-black/85 flex flex-col items-center justify-center p-4 z-30 hidden">
-                        <h3 class="text-yellow-400 font-extrabold text-xl mb-1">FIELD GOAL ATTEMPT</h3>
-                        <p class="text-xs text-gray-300 mb-4" id="kicking-dist-text">Distance: 35 Yards</p>
-
-                        <!-- Aim Needle Bar -->
-                        <div class="w-64 h-8 bg-gray-800 border-2 border-white rounded-lg relative overflow-hidden mb-4">
-                            <div class="absolute inset-y-0 left-1/2 -ml-3 w-6 bg-green-500 opacity-80"></div>
-                            <div id="kick-aim-needle" class="absolute top-0 bottom-0 w-2 bg-yellow-400 left-0"></div>
-                        </div>
-
-                        <!-- Power Meter Bar -->
-                        <div class="w-64 h-6 bg-gray-800 border-2 border-white rounded-lg relative overflow-hidden mb-6">
-                            <div id="kick-power-bar" class="h-full bg-gradient-to-r from-yellow-500 to-red-600 w-0"></div>
-                        </div>
-
-                        <button onclick="handleKickPress()" id="btn-kick-action" class="pixel-btn bg-yellow-400 hover:bg-yellow-300 text-black font-extrabold px-8 py-3 text-sm rounded">SET AIM</button>
-                    </div>
-
-                    <!-- Simulating Opponent Drive Overlay -->
-                    <div id="sim-overlay" class="absolute inset-0 bg-black/90 flex flex-col items-center justify-center p-6 z-40 hidden">
-                        <div class="text-yellow-400 text-xl font-bold mb-2 animate-pulse">DEFENSE ON THE FIELD</div>
-                        <div id="sim-ticker" class="text-sm text-gray-300 font-mono mb-4 text-center max-w-md bg-gray-900 p-3 rounded border border-gray-700">
-                            Opponent drive in progress...
-                        </div>
-                        <div class="w-48 h-3 bg-gray-800 rounded-full overflow-hidden border border-gray-600">
-                            <div id="sim-progress-bar" class="h-full bg-blue-500 w-0 transition-all duration-300"></div>
-                        </div>
-                    </div>
-
-                </div>
-
-                <div class="w-full bg-gray-900 border-2 border-gray-700 rounded-b-lg p-2 mt-1 flex items-center justify-between gap-2">
-                    <div class="text-[11px] text-gray-400 hidden sm:block">
-                        <span class="text-yellow-400">Controls:</span> Mouse drag QB to Pass | W/S/Up/Down to Juke | D/Right for Speed Burst
-                    </div>
-                    
-                    <!-- Mobile On-screen Touch Pads -->
-                    <div class="flex items-center space-x-2 w-full justify-between sm:hidden">
-                        <div class="flex space-x-1">
-                            <button id="touch-up" class="pixel-btn bg-gray-800 border border-gray-600 text-white font-bold p-3 rounded text-xs">▲ JUKE UP</button>
-                            <button id="touch-down" class="pixel-btn bg-gray-800 border border-gray-600 text-white font-bold p-3 rounded text-xs">▼ JUKE DOWN</button>
-                        </div>
-                        <button id="touch-burst" class="pixel-btn bg-yellow-500 text-black font-extrabold px-4 py-3 rounded text-xs">⚡ BOOST</button>
-                    </div>
-                </div>
-
-            </div>
-
-        </main>
-    </div>
+    <!-- Footer -->
+    <footer class="mt-4 text-center text-xs text-gray-500 font-arcade">
+        NEON TETRIS ARCADE &bull; WEB AUDIO SYNTH &bull; 2026
+    </footer>
 
     <script>
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        
-        function playSound(type) {
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            const now = audioCtx.currentTime;
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 30;
 
-            if (type === 'whistle') {
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(1400, now);
-                osc.frequency.exponentialRampToValueAtTime(1800, now + 0.1);
-                gain.gain.setValueAtTime(0.2, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
-                osc.start(now);
-                osc.stop(now + 0.25);
-            } else if (type === 'snap') {
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(220, now);
-                osc.frequency.exponentialRampToValueAtTime(110, now + 0.1);
-                gain.gain.setValueAtTime(0.3, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-                osc.start(now);
-                osc.stop(now + 0.1);
-            } else if (type === 'throw') {
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(350, now);
-                osc.frequency.exponentialRampToValueAtTime(150, now + 0.15);
-                gain.gain.setValueAtTime(0.25, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
-                osc.start(now);
-                osc.stop(now + 0.15);
-            } else if (type === 'catch') {
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(440, now);
-                osc.frequency.setValueAtTime(880, now + 0.05);
-                gain.gain.setValueAtTime(0.3, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
-                osc.start(now);
-                osc.stop(now + 0.12);
-            } else if (type === 'tackle') {
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(150, now);
-                osc.frequency.exponentialRampToValueAtTime(40, now + 0.2);
-                gain.gain.setValueAtTime(0.4, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
-                osc.start(now);
-                osc.stop(now + 0.2);
-            } else if (type === 'td') {
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(300, now);
-                osc.frequency.setValueAtTime(450, now + 0.15);
-                osc.frequency.setValueAtTime(600, now + 0.3);
-                osc.frequency.setValueAtTime(900, now + 0.45);
-                gain.gain.setValueAtTime(0.3, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.7);
-                osc.start(now);
-                osc.stop(now + 0.7);
-            } else if (type === 'kick') {
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(100, now);
-                osc.frequency.exponentialRampToValueAtTime(300, now + 0.15);
-                gain.gain.setValueAtTime(0.4, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
-                osc.start(now);
-                osc.stop(now + 0.2);
-            }
-        }
-
-        const LEAGUE_TEAMS = [
-            { id: 'BOS', name: 'Boston Chargers', color: '#2563eb', offStars: 4, defStars: 4 },
-            { id: 'NY', name: 'New York Titans', color: '#dc2626', offStars: 3, defStars: 4 },
-            { id: 'PHI', name: 'Philly Eagles', color: '#16a34a', offStars: 4, defStars: 3 },
-            { id: 'DAL', name: 'Dallas Outlaws', color: '#0284c7', offStars: 5, defStars: 3 },
-            { id: 'SF', name: 'San Fran 49ers', color: '#b91c1c', offStars: 4, defStars: 5 },
-            { id: 'KC', name: 'Kansas Chiefs', color: '#ea580c', offStars: 5, defStars: 4 },
-            { id: 'MIA', name: 'Miami Sharks', color: '#0d9488', offStars: 3, defStars: 3 },
-            { id: 'GB', name: 'Green Packers', color: '#15803d', offStars: 4, defStars: 4 }
-        ];
-
-        let franchise = {
-            teamId: 'BOS',
-            coachingCredits: 12,
-            week: 1,
-            wins: 0,
-            losses: 0,
-            fanRating: 85,
-            facilities: {
-                stadium: 2,
-                training: 1,
-                rehab: 1
-            },
-            roster: [
-                { pos: 'QB', name: 'T. Brady', stars: 4, level: 3, armStrength: 4, speed: 2, xp: 120, maxXp: 200 },
-                { pos: 'RB', name: 'C. McCaffrey', stars: 5, level: 4, power: 5, speed: 5, xp: 80, maxXp: 250 },
-                { pos: 'WR1', name: 'J. Jefferson', stars: 5, level: 4, catching: 5, speed: 5, xp: 40, maxXp: 250 },
-                { pos: 'WR2', name: 'T. Hill', stars: 4, level: 3, catching: 3, speed: 5, xp: 150, maxXp: 200 },
-                { pos: 'TE', name: 'T. Kelce', stars: 4, level: 3, catching: 4, speed: 3, xp: 90, maxXp: 200 },
-                { pos: 'K', name: 'J. Tucker', stars: 4, level: 3, range: 4, accuracy: 5, xp: 60, maxXp: 180 }
-            ],
-            schedule: [],
-            standings: []
+        // Tetromino Shapes & Colors (Cyan, Blue, Orange, Yellow, Green, Purple, Red)
+        const SHAPES = {
+            'I': [[0,0,0,0], [1,1,1,1], [0,0,0,0], [0,0,0,0]],
+            'J': [[1,0,0], [1,1,1], [0,0,0]],
+            'L': [[0,0,1], [1,1,1], [0,0,0]],
+            'O': [[1,1], [1,1]],
+            'S': [[0,1,1], [1,1,0], [0,0,0]],
+            'T': [[0,1,0], [1,1,1], [0,0,0]],
+            'Z': [[1,1,0], [0,1,1], [0,0,0]]
         };
 
-        function generateSchedule() {
-            franchise.schedule = [];
-            let opponents = LEAGUE_TEAMS.filter(t => t.id !== franchise.teamId);
+        const COLORS = {
+            'I': '#00f0f0',
+            'J': '#2060ff',
+            'L': '#ff9000',
+            'O': '#fefe00',
+            'S': '#00fe00',
+            'T': '#a000fe',
+            'Z': '#fe0040'
+        };
+
+        class AudioSynth {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioCtx();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playTone(freq, type, duration, gainVal = 0.1) {
+                if (this.muted || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch (e) { console.error(e); }
+            }
+
+            move() { this.playTone(180, 'triangle', 0.05, 0.05); }
+            rotate() { this.playTone(320, 'sine', 0.08, 0.08); }
+            drop() { this.playTone(120, 'square', 0.1, 0.08); }
             
-            for (let w = 1; w <= 18; w++) {
-                let opp = opponents[(w - 1) % opponents.length];
-                franchise.schedule.push({
-                    week: w,
-                    oppId: opp.id,
-                    played: false,
-                    result: null,
-                    userScore: 0,
-                    oppScore: 0
+            lineClear() {
+                if (this.muted || !this.ctx) return;
+                const notes = [261.63, 329.63, 392.00, 523.25]; // C E G C
+                notes.forEach((freq, idx) => {
+                    setTimeout(() => this.playTone(freq, 'sine', 0.15, 0.12), idx * 60);
                 });
             }
 
-            franchise.standings = LEAGUE_TEAMS.map(t => ({
-                id: t.id,
-                name: t.name,
-                wins: t.id === 'BOS' ? franchise.wins : Math.floor(Math.random() * 3),
-                losses: t.id === 'BOS' ? franchise.losses : Math.floor(Math.random() * 3)
-            }));
+            gameOver() {
+                if (this.muted || !this.ctx) return;
+                const freqs = [300, 260, 220, 150];
+                freqs.forEach((freq, idx) => {
+                    setTimeout(() => this.playTone(freq, 'sawtooth', 0.25, 0.15), idx * 120);
+                });
+            }
         }
 
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab-view').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('#nav-tabs button').forEach(el => {
-                if (!el.classList.contains('bg-green-600')) {
-                    el.className = 'pixel-btn bg-gray-700 hover:bg-gray-600 text-white font-extrabold px-3 py-2 text-xs sm:text-sm rounded';
+        const audio = new AudioSynth();
+
+        class ParticleEngine {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.particles = [];
+            }
+
+            explodeRow(rowY, color) {
+                const numParticles = 30;
+                for (let i = 0; i < numParticles; i++) {
+                    this.particles.push({
+                        x: Math.random() * this.canvas.width,
+                        y: rowY * BLOCK_SIZE + BLOCK_SIZE / 2,
+                        vx: (Math.random() - 0.5) * 8,
+                        vy: (Math.random() - 0.5) * 8,
+                        size: Math.random() * 4 + 2,
+                        color: color || '#00f0ff',
+                        alpha: 1,
+                        decay: Math.random() * 0.03 + 0.015
+                    });
                 }
-            });
-
-            const activeTabBtn = document.getElementById(`tab-${tabName}`);
-            if (activeTabBtn && !activeTabBtn.classList.contains('bg-green-600')) {
-                activeTabBtn.className = 'pixel-btn bg-yellow-500 hover:bg-yellow-400 text-black font-extrabold px-3 py-2 text-xs sm:text-sm rounded';
             }
 
-            document.getElementById(`view-${tabName}`).classList.remove('hidden');
-            renderUI();
-        }
+            updateAndDraw() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const p = this.particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.alpha -= p.decay;
 
-        function renderUI() {
-            // Update Header Stats
-            document.getElementById('cc-display').textContent = franchise.coachingCredits;
-            document.getElementById('week-display').textContent = franchise.week <= 18 ? franchise.week : 'PLAYOFFS';
-            document.getElementById('header-team-badge').textContent = `BOSTON (${franchise.wins}-${franchise.losses})`;
+                    if (p.alpha <= 0) {
+                        this.particles.splice(i, 1);
+                        continue;
+                    }
 
-            // Front Office Render
-            document.getElementById('office-fans').textContent = `${franchise.fanRating}%`;
-            
-            let currentOpp = getNextOpponent();
-            if (currentOpp) {
-                document.getElementById('opp-name-badge').textContent = currentOpp.name.toUpperCase();
-                document.getElementById('opp-icon').textContent = currentOpp.id;
-            }
-
-            // Roster Render
-            renderRoster();
-            
-            // Facilities Render
-            document.getElementById('facility-stadium-lvl').textContent = `Level ${franchise.facilities.stadium} / 5`;
-            document.getElementById('facility-training-lvl').textContent = `Level ${franchise.facilities.training} / 5`;
-            document.getElementById('facility-rehab-lvl').textContent = `Level ${franchise.facilities.rehab} / 5`;
-
-            // Schedule Render
-            renderSchedule();
-        }
-
-        function getNextOpponent() {
-            let match = franchise.schedule.find(m => m.week === franchise.week);
-            if (!match) return LEAGUE_TEAMS[1];
-            return LEAGUE_TEAMS.find(t => t.id === match.oppId);
-        }
-
-        function renderRoster() {
-            const container = document.getElementById('roster-grid');
-            container.innerHTML = '';
-
-            franchise.roster.forEach((p, idx) => {
-                let stars = '★'.repeat(p.stars) + '☆'.repeat(5 - p.stars);
-                let xpPct = Math.min(100, Math.floor((p.xp / p.maxXp) * 100));
-
-                let card = document.createElement('div');
-                card.className = 'bg-gray-900 p-3 rounded-lg border-2 border-gray-700 flex flex-col justify-between';
-                card.innerHTML = `
-                    <div>
-                        <div class="flex justify-between items-start mb-1">
-                            <span class="px-2 py-0.5 bg-yellow-500 text-black font-black text-xs rounded">${p.pos}</span>
-                            <span class="text-xs text-yellow-400">${stars}</span>
-                        </div>
-                        <h4 class="font-bold text-white text-sm">${p.name}</h4>
-                        <p class="text-[11px] text-gray-400">Level ${p.level}</p>
-                        
-                        <!-- XP Bar -->
-                        <div class="w-full bg-gray-800 h-2 rounded-full my-2 overflow-hidden border border-gray-700">
-                            <div class="bg-green-500 h-full" style="width: ${xpPct}%"></div>
-                        </div>
-                    </div>
-                    <button onclick="upgradePlayer(${idx})" class="pixel-btn bg-blue-600 hover:bg-blue-500 text-white font-bold p-1.5 text-xs rounded mt-2">
-                        UPGRADE (+1 STAR) [2 CC]
-                    </button>
-                `;
-                container.appendChild(card);
-            });
-        }
-
-        function upgradePlayer(idx) {
-            let player = franchise.roster[idx];
-            if (franchise.coachingCredits >= 2 && player.stars < 5) {
-                franchise.coachingCredits -= 2;
-                player.stars++;
-                player.level++;
-                playSound('catch');
-                renderUI();
+                    this.ctx.save();
+                    this.ctx.globalAlpha = p.alpha;
+                    this.ctx.fillStyle = p.color;
+                    this.ctx.shadowBlur = 10;
+                    this.ctx.shadowColor = p.color;
+                    this.ctx.fillRect(p.x, p.y, p.size, p.size);
+                    this.ctx.restore();
+                }
             }
         }
 
-        function upgradeFacility(type) {
-            if (franchise.coachingCredits >= 4 && franchise.facilities[type] < 5) {
-                franchise.coachingCredits -= 4;
-                franchise.facilities[type]++;
-                playSound('td');
-                renderUI();
-            }
-        }
+        class TetrisGame {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.holdCanvas = document.getElementById('holdCanvas');
+                this.holdCtx = this.holdCanvas.getContext('2d');
+                this.nextCanvas = document.getElementById('nextCanvas');
+                this.nextCtx = this.nextCanvas.getContext('2d');
 
-        function claimSponsorBonus() {
-            franchise.coachingCredits += 3;
-            playSound('whistle');
-            renderUI();
-        }
+                this.particleEngine = new ParticleEngine(document.getElementById('particleCanvas'));
 
-        function buyCC(amount) {
-            franchise.coachingCredits += 10;
-            playSound('td');
-            renderUI();
-        }
-
-        function renderSchedule() {
-            const list = document.getElementById('schedule-list');
-            list.innerHTML = '';
-
-            franchise.schedule.forEach(m => {
-                let opp = LEAGUE_TEAMS.find(t => t.id === m.oppId);
-                let row = document.createElement('div');
-                row.className = `p-2 rounded flex justify-between items-center ${m.week === franchise.week ? 'bg-yellow-500/20 border border-yellow-500' : 'bg-gray-800'}`;
+                this.grid = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
                 
-                let resultText = m.played ? `${m.result} (${m.userScore}-${m.oppScore})` : 'UPCOMING';
-                row.innerHTML = `
-                    <span>WEEK ${m.week}: VS ${opp.name}</span>
-                    <span class="font-bold ${m.result === 'WIN' ? 'text-green-400' : m.result === 'LOSS' ? 'text-red-400' : 'text-gray-400'}">${resultText}</span>
-                `;
-                list.appendChild(row);
-            });
+                this.bag = [];
+                this.currentPiece = null;
+                this.nextPiece = null;
+                this.holdPiece = null;
+                this.canHold = true;
 
-            // Render Standings
-            const stdList = document.getElementById('standings-list');
-            stdList.innerHTML = '';
-            franchise.standings.sort((a,b) => b.wins - a.wins).forEach((t, i) => {
-                let row = document.createElement('div');
-                row.className = 'p-1.5 bg-gray-800 rounded flex justify-between items-center';
-                row.innerHTML = `
-                    <span>${i + 1}. ${t.name}</span>
-                    <span class="font-bold text-yellow-400">${t.wins} - ${t.losses}</span>
-                `;
-                stdList.appendChild(row);
-            });
-        }
+                this.score = 0;
+                this.lines = 0;
+                this.level = 1;
+                this.highScore = parseInt(localStorage.getItem('tetris_high_score') || '0', 10);
 
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
+                this.isPaused = false;
+                this.isGameOver = false;
 
-        const YARD_PX = 18;
-        const FIELD_TOP = 60;
-        const FIELD_BOTTOM = 360;
-        const FIELD_HEIGHT = FIELD_BOTTOM - FIELD_TOP;
+                this.dropCounter = 0;
+                this.dropInterval = 800;
+                this.lastTime = 0;
 
-        const GAME_STATES = { PRE_SNAP: 0, PASSING: 1, BALL_IN_AIR: 2, RUNNING: 3, PLAY_OVER: 4, KICKING: 5 };
-        let matchState = GAME_STATES.PRE_SNAP;
-
-        // On-field match variables
-        let cameraX = 0;
-        let lineOfScrimmage = 20;
-        let firstDownLine = 30;
-        let down = 1;
-        let yardsToGo = 10;
-        let quarter = 1;
-        let clockTime = 120; // 2 minutes
-        let userScore = 0;
-        let oppScore = 0;
-        let selectedPlay = 'PASS_SLANT';
-        let audiblesLeft = 3;
-
-        // Kicking state variables
-        let kickAimPos = 0;
-        let kickAimSpeed = 3;
-        let kickPower = 0;
-        let kickPowerSpeed = 4;
-        let kickStep = 0; // 0 = set aim, 1 = set power
-
-        // Slingshot Aim Drag State
-        let isDragging = false;
-        let dragStart = { x: 0, y: 0 };
-        let dragCurrent = { x: 0, y: 0 };
-
-        // Keyboard State
-        const keys = {};
-        window.addEventListener('keydown', e => { keys[e.key] = true; });
-        window.addEventListener('keyup', e => { keys[e.key] = false; });
-
-        // Player Entities
-        let qbEntity, ballCarrierEntity;
-        let receivers = [];
-        let defenders = [];
-        let ball = { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, airborne: false, targetX: 0, targetY: 0 };
-
-        class OnFieldPlayer {
-            constructor(x, y, color, role, team) {
-                this.x = x;
-                this.y = y;
-                this.color = color;
-                this.role = role;
-                this.team = team;
-                this.speed = 2.4;
-                this.route = [];
-                this.routeIndex = 0;
-                this.hasBall = false;
-                this.tackled = false;
+                this.initUI();
             }
 
-            update() {
-                if (this.tackled) return;
+            initUI() {
+                document.getElementById('highScoreVal').textContent = this.highScore;
+                this.updateDropInterval();
+            }
 
-                if (this.team === 'OFF' && matchState === GAME_STATES.PASSING) {
-                    if (this.route.length > 0 && this.routeIndex < this.route.length) {
-                        let target = this.route[this.routeIndex];
-                        let dx = target.x - this.x;
-                        let dy = target.y - this.y;
-                        let dist = Math.hypot(dx, dy);
+            updateDropInterval() {
+                // Progressive drop speed up
+                this.dropInterval = Math.max(80, 800 - (this.level - 1) * 70);
+            }
 
-                        if (dist < 6) {
-                            this.routeIndex++;
-                        } else {
-                            this.x += (dx / dist) * (this.speed * 0.85);
-                            this.y += (dy / dist) * (this.speed * 0.85);
+            generateBag() {
+                const keys = Object.keys(SHAPES);
+                for (let i = keys.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [keys[i], keys[j]] = [keys[j], keys[i]];
+                }
+                return keys;
+            }
+
+            getNextPieceFromBag() {
+                if (this.bag.length === 0) {
+                    this.bag = this.generateBag();
+                }
+                const type = this.bag.pop();
+                return {
+                    type: type,
+                    shape: SHAPES[type].map(row => [...row]),
+                    color: COLORS[type],
+                    x: Math.floor(COLS / 2) - Math.ceil(SHAPES[type][0].length / 2),
+                    y: 0
+                };
+            }
+
+            start() {
+                this.grid = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+                this.bag = [];
+                this.score = 0;
+                this.lines = 0;
+                this.level = 1;
+                this.isGameOver = false;
+                this.isPaused = false;
+                this.holdPiece = null;
+                this.canHold = true;
+
+                this.currentPiece = this.getNextPieceFromBag();
+                this.nextPiece = this.getNextPieceFromBag();
+
+                this.updateDropInterval();
+                this.updateScoreUI();
+                
+                document.getElementById('pauseOverlay').classList.add('hidden');
+                document.getElementById('gameOverOverlay').classList.add('hidden');
+
+                this.lastTime = performance.now();
+            }
+
+            collide(piece, offsetX = 0, offsetY = 0, customShape = null) {
+                const shape = customShape || piece.shape;
+                for (let r = 0; r < shape.length; r++) {
+                    for (let c = 0; c < shape[r].length; c++) {
+                        if (shape[r][c]) {
+                            const newX = piece.x + c + offsetX;
+                            const newY = piece.y + r + offsetY;
+
+                            if (newX < 0 || newX >= COLS || newY >= ROWS) {
+                                return true;
+                            }
+                            if (newY >= 0 && this.grid[newY][newX]) {
+                                return true;
+                            }
                         }
                     }
-                } else if (this === ballCarrierEntity && matchState === GAME_STATES.RUNNING) {
-                    let moveX = 0, moveY = 0;
-                    if (keys['ArrowUp'] || keys['w'] || keys['W']) moveY -= 1;
-                    if (keys['ArrowDown'] || keys['s'] || keys['S']) moveY += 1;
-                    if (keys['ArrowRight'] || keys['d'] || keys['D']) moveX += 1.2;
-                    if (keys['ArrowLeft'] || keys['a'] || keys['A']) moveX -= 0.5;
+                }
+                return false;
+            }
 
-                    let len = Math.hypot(moveX, moveY);
-                    if (len > 0) {
-                        this.x += (moveX / len) * this.speed;
-                        this.y += (moveY / len) * this.speed;
-                    } else {
-                        this.x += 1.0; // Momentum
+            moveLeft() {
+                if (!this.collide(this.currentPiece, -1, 0)) {
+                    this.currentPiece.x--;
+                    audio.move();
+                    return true;
+                }
+                return false;
+            }
+
+            moveRight() {
+                if (!this.collide(this.currentPiece, 1, 0)) {
+                    this.currentPiece.x++;
+                    audio.move();
+                    return true;
+                }
+                return false;
+            }
+
+            rotate(clockwise = true) {
+                const shape = this.currentPiece.shape;
+                const N = shape.length;
+                const rotated = Array.from({ length: N }, () => Array(N).fill(0));
+
+                for (let r = 0; r < N; r++) {
+                    for (let c = 0; c < N; c++) {
+                        if (clockwise) {
+                            rotated[c][N - 1 - r] = shape[r][c];
+                        } else {
+                            rotated[N - 1 - c][r] = shape[r][c];
+                        }
                     }
+                }
 
-                    this.y = Math.max(FIELD_TOP + 12, Math.min(FIELD_BOTTOM - 12, this.y));
-                } else if (this.team === 'DEF' && (matchState === GAME_STATES.PASSING || matchState === GAME_STATES.BALL_IN_AIR || matchState === GAME_STATES.RUNNING)) {
-                    let targetX = ball.airborne ? ball.targetX : (ballCarrierEntity ? ballCarrierEntity.x : qbEntity.x);
-                    let targetY = ball.airborne ? ball.targetY : (ballCarrierEntity ? ballCarrierEntity.y : qbEntity.y);
-
-                    let dx = targetX - this.x;
-                    let dy = targetY - this.y;
-                    let dist = Math.hypot(dx, dy);
-
-                    if (dist > 4) {
-                        let defSpeed = (matchState === GAME_STATES.RUNNING) ? this.speed * 0.94 : this.speed * 0.75;
-                        this.x += (dx / dist) * defSpeed;
-                        this.y += (dy / dist) * defSpeed;
+                // Wall-kick offsets test
+                const kicks = [0, -1, 1, -2, 2];
+                for (let kick of kicks) {
+                    if (!this.collide(this.currentPiece, kick, 0, rotated)) {
+                        this.currentPiece.x += kick;
+                        this.currentPiece.shape = rotated;
+                        audio.rotate();
+                        return;
                     }
                 }
             }
 
-            draw() {
-                let px = this.x - cameraX;
-                let py = this.y;
+            softDrop() {
+                if (!this.collide(this.currentPiece, 0, 1)) {
+                    this.currentPiece.y++;
+                    this.score += 1;
+                    this.updateScoreUI();
+                    audio.move();
+                    return true;
+                } else {
+                    this.lockPiece();
+                    return false;
+                }
+            }
 
-                // Player Shadow
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+            hardDrop() {
+                let dropDistance = 0;
+                while (!this.collide(this.currentPiece, 0, 1)) {
+                    this.currentPiece.y++;
+                    dropDistance++;
+                }
+                this.score += dropDistance * 2;
+                this.updateScoreUI();
+                audio.drop();
+                this.lockPiece();
+            }
+
+            getGhostPosition() {
+                const ghost = {
+                    ...this.currentPiece,
+                    shape: this.currentPiece.shape
+                };
+                while (!this.collide(ghost, 0, 1)) {
+                    ghost.y++;
+                }
+                return ghost;
+            }
+
+            hold() {
+                if (!this.canHold) return;
+
+                audio.rotate();
+                if (!this.holdPiece) {
+                    this.holdPiece = {
+                        type: this.currentPiece.type,
+                        shape: SHAPES[this.currentPiece.type].map(r => [...r]),
+                        color: COLORS[this.currentPiece.type]
+                    };
+                    this.currentPiece = this.nextPiece;
+                    this.nextPiece = this.getNextPieceFromBag();
+                } else {
+                    const temp = {
+                        type: this.currentPiece.type,
+                        shape: SHAPES[this.currentPiece.type].map(r => [...r]),
+                        color: COLORS[this.currentPiece.type]
+                    };
+                    this.currentPiece = {
+                        type: this.holdPiece.type,
+                        shape: SHAPES[this.holdPiece.type].map(r => [...r]),
+                        color: COLORS[this.holdPiece.type],
+                        x: Math.floor(COLS / 2) - Math.ceil(SHAPES[this.holdPiece.type][0].length / 2),
+                        y: 0
+                    };
+                    this.holdPiece = temp;
+                }
+                this.canHold = false;
+            }
+
+            lockPiece() {
+                for (let r = 0; r < this.currentPiece.shape.length; r++) {
+                    for (let c = 0; c < this.currentPiece.shape[r].length; c++) {
+                        if (this.currentPiece.shape[r][c]) {
+                            const boardY = this.currentPiece.y + r;
+                            const boardX = this.currentPiece.x + c;
+
+                            if (boardY < 0) {
+                                this.gameOver();
+                                return;
+                            }
+                            this.grid[boardY][boardX] = this.currentPiece.color;
+                        }
+                    }
+                }
+
+                this.clearLines();
+
+                this.currentPiece = this.nextPiece;
+                this.nextPiece = this.getNextPieceFromBag();
+                this.canHold = true;
+
+                if (this.collide(this.currentPiece)) {
+                    this.gameOver();
+                }
+            }
+
+            clearLines() {
+                let linesCleared = 0;
+
+                for (let r = ROWS - 1; r >= 0; r--) {
+                    if (this.grid[r].every(cell => cell !== null)) {
+                        const rowColor = this.grid[r][0];
+                        this.particleEngine.explodeRow(r, rowColor);
+
+                        this.grid.splice(r, 1);
+                        this.grid.unshift(Array(COLS).fill(null));
+                        linesCleared++;
+                        r++; // Recheck same row index after shift
+                    }
+                }
+
+                if (linesCleared > 0) {
+                    audio.lineClear();
+                    const lineScores = [0, 100, 300, 500, 800];
+                    this.score += lineScores[linesCleared] * this.level;
+                    this.lines += linesCleared;
+                    
+                    const newLevel = Math.floor(this.lines / 10) + 1;
+                    if (newLevel !== this.level) {
+                        this.level = newLevel;
+                        this.updateDropInterval();
+                    }
+
+                    this.updateScoreUI();
+                }
+            }
+
+            gameOver() {
+                this.isGameOver = true;
+                audio.gameOver();
+
+                let isNewHigh = false;
+                if (this.score > this.highScore) {
+                    this.highScore = this.score;
+                    localStorage.setItem('tetris_high_score', this.highScore.toString());
+                    document.getElementById('highScoreVal').textContent = this.highScore;
+                    isNewHigh = true;
+                }
+
+                document.getElementById('finalScoreMsg').textContent = `FINAL SCORE: ${this.score}`;
+                const newHighMsg = document.getElementById('newHighMsg');
+                if (isNewHigh) {
+                    newHighMsg.classList.remove('hidden');
+                } else {
+                    newHighMsg.classList.add('hidden');
+                }
+
+                document.getElementById('gameOverOverlay').classList.remove('hidden');
+            }
+
+            updateScoreUI() {
+                document.getElementById('scoreVal').textContent = this.score;
+                document.getElementById('levelVal').textContent = this.level;
+                document.getElementById('linesVal').textContent = this.lines;
+            }
+
+            drawBlock(ctx, x, y, color, isGhost = false, size = BLOCK_SIZE) {
+                const px = x * size;
+                const py = y * size;
+
+                if (isGhost) {
+                    ctx.save();
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = 1.5;
+                    ctx.strokeRect(px + 2, py + 2, size - 4, size - 4);
+                    ctx.fillStyle = color;
+                    ctx.globalAlpha = 0.12;
+                    ctx.fillRect(px + 2, py + 2, size - 4, size - 4);
+                    ctx.restore();
+                    return;
+                }
+
+                // Base block color
+                ctx.fillStyle = color;
+                ctx.fillRect(px, py, size, size);
+
+                // Top & Left Highlight (3D Bevel)
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
                 ctx.beginPath();
-                ctx.ellipse(px, py + 10, 9, 4, 0, 0, Math.PI * 2);
+                ctx.moveTo(px, py);
+                ctx.lineTo(px + size, py);
+                ctx.lineTo(px + size - 3, py + 3);
+                ctx.lineTo(px + 3, py + 3);
+                ctx.lineTo(px + 3, py + size - 3);
+                ctx.lineTo(px, py + size);
                 ctx.fill();
 
-                // Player Body
-                ctx.fillStyle = this.color;
-                ctx.fillRect(px - 7, py - 12, 14, 16);
+                // Bottom & Right Shadow
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+                ctx.beginPath();
+                ctx.moveTo(px + size, py + size);
+                ctx.lineTo(px, py + size);
+                ctx.lineTo(px + 3, py + size - 3);
+                ctx.lineTo(px + size - 3, py + size - 3);
+                ctx.lineTo(px + size - 3, py + 3);
+                ctx.lineTo(px + size, py);
+                ctx.fill();
 
-                // Helmet
-                ctx.fillStyle = this.team === 'OFF' ? '#ffffff' : '#e74c3c';
-                ctx.fillRect(px - 6, py - 19, 12, 8);
-
-                // Ball Indicator
-                if (this.hasBall) {
-                    ctx.fillStyle = '#f1c40f';
-                    ctx.beginPath();
-                    ctx.moveTo(px, py - 24);
-                    ctx.lineTo(px - 6, py - 32);
-                    ctx.lineTo(px + 6, py - 32);
-                    ctx.fill();
-                }
-            }
-        }
-
-        function startPlayGame() {
-            document.querySelectorAll('.tab-view').forEach(el => el.classList.add('hidden'));
-            document.getElementById('view-GAME').classList.remove('hidden');
-
-            userScore = 0;
-            oppScore = 0;
-            quarter = 1;
-            clockTime = 120;
-            lineOfScrimmage = 20;
-            firstDownLine = 30;
-            down = 1;
-            yardsToGo = 10;
-            audiblesLeft = 3;
-
-            setupSnapPlay();
-        }
-
-        function setupSnapPlay() {
-            matchState = GAME_STATES.PRE_SNAP;
-            document.getElementById('playbook-overlay').classList.remove('hidden');
-            document.getElementById('kicking-overlay').classList.add('hidden');
-            document.getElementById('sim-overlay').classList.add('hidden');
-
-            let startPx = (lineOfScrimmage + 10) * YARD_PX;
-
-            qbEntity = new OnFieldPlayer(startPx - 30, FIELD_TOP + FIELD_HEIGHT / 2, '#2563eb', 'QB', 'OFF');
-            ballCarrierEntity = qbEntity;
-            qbEntity.hasBall = true;
-
-            // Setup Receivers based on play selection
-            receivers = [
-                new OnFieldPlayer(startPx - 5, FIELD_TOP + 30, '#2563eb', 'WR1', 'OFF'),
-                new OnFieldPlayer(startPx - 5, FIELD_BOTTOM - 30, '#2563eb', 'WR2', 'OFF'),
-                new OnFieldPlayer(startPx - 5, FIELD_TOP + FIELD_HEIGHT / 2 - 40, '#2563eb', 'TE', 'OFF')
-            ];
-
-            // Routes assignment
-            if (selectedPlay === 'RUN_INSIDE') {
-                receivers[0].route = [{ x: startPx + 100, y: FIELD_TOP + 30 }];
-                receivers[1].route = [{ x: startPx + 100, y: FIELD_BOTTOM - 30 }];
-                receivers[2].route = [{ x: startPx + 80, y: FIELD_TOP + FIELD_HEIGHT / 2 - 40 }];
-            } else if (selectedPlay === 'PASS_SLANT') {
-                receivers[0].route = [{ x: startPx + 120, y: FIELD_TOP + 30 }, { x: startPx + 240, y: FIELD_TOP + 120 }];
-                receivers[1].route = [{ x: startPx + 120, y: FIELD_BOTTOM - 30 }, { x: startPx + 240, y: FIELD_BOTTOM - 120 }];
-                receivers[2].route = [{ x: startPx + 100, y: FIELD_TOP + FIELD_HEIGHT / 2 - 20 }];
-            } else { // PASS_DEEP
-                receivers[0].route = [{ x: startPx + 280, y: FIELD_TOP + 30 }];
-                receivers[1].route = [{ x: startPx + 320, y: FIELD_BOTTOM - 30 }];
-                receivers[2].route = [{ x: startPx + 180, y: FIELD_TOP + FIELD_HEIGHT / 2 - 80 }];
+                // Inner core
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+                ctx.fillRect(px + 4, py + 4, size - 8, size - 8);
             }
 
-            // Defenders Setup
-            let opp = getNextOpponent();
-            defenders = [
-                new OnFieldPlayer(startPx + 80, FIELD_TOP + 40, opp.color, 'DEF', 'DEF'),
-                new OnFieldPlayer(startPx + 80, FIELD_BOTTOM - 40, opp.color, 'DEF', 'DEF'),
-                new OnFieldPlayer(startPx + 120, FIELD_TOP + FIELD_HEIGHT / 2 - 30, opp.color, 'DEF', 'DEF'),
-                new OnFieldPlayer(startPx + 160, FIELD_TOP + FIELD_HEIGHT / 2 + 30, opp.color, 'DEF', 'DEF')
-            ];
+            drawPreview(ctx, piece) {
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                if (!piece) return;
 
-            ball.airborne = false;
-            ball.z = 0;
-            updateHUD();
-        }
+                const shape = piece.shape;
+                const size = 20;
+                const offsetX = Math.floor((ctx.canvas.width - shape[0].length * size) / 2);
+                const offsetY = Math.floor((ctx.canvas.height - shape.length * size) / 2);
 
-        function selectPlay(playType) {
-            if (playType === 'FIELD_GOAL') {
-                startKickingMinigame();
-                return;
-            }
-            selectedPlay = playType;
-            setupSnapPlay();
-        }
-
-        function useAudible() {
-            if (audiblesLeft > 0) {
-                audiblesLeft--;
-                document.getElementById('btn-audible').textContent = `AUDIBLE (${audiblesLeft} LEFT)`;
-                const plays = ['RUN_INSIDE', 'PASS_SLANT', 'PASS_DEEP'];
-                selectedPlay = plays[Math.floor(Math.random() * plays.length)];
-                playSound('snap');
-                setupSnapPlay();
-            }
-        }
-
-        function snapBall() {
-            matchState = GAME_STATES.PASSING;
-            document.getElementById('playbook-overlay').classList.add('hidden');
-            playSound('snap');
-
-            if (selectedPlay === 'RUN_INSIDE') {
-                // Direct Handoff to Running Back
-                setTimeout(() => {
-                    qbEntity.hasBall = false;
-                    receivers[2].hasBall = true;
-                    ballCarrierEntity = receivers[2];
-                    matchState = GAME_STATES.RUNNING;
-                }, 300);
-            }
-        }
-
-        canvas.addEventListener('mousedown', e => handleStart(e.clientX, e.clientY));
-        canvas.addEventListener('mousemove', e => handleMove(e.clientX, e.clientY));
-        canvas.addEventListener('mouseup', handleEnd);
-
-        canvas.addEventListener('touchstart', e => {
-            if (e.touches.length > 0) handleStart(e.touches[0].clientX, e.touches[0].clientY);
-        });
-        canvas.addEventListener('touchmove', e => {
-            if (e.touches.length > 0) handleMove(e.touches[0].clientX, e.touches[0].clientY);
-        });
-        canvas.addEventListener('touchend', handleEnd);
-
-        function handleStart(cx, cy) {
-            let rect = canvas.getBoundingClientRect();
-            let clickX = cx - rect.left;
-            let clickY = cy - rect.top;
-
-            if (matchState === GAME_STATES.PASSING) {
-                isDragging = true;
-                dragStart = { x: clickX, y: clickY };
-                dragCurrent = { x: clickX, y: clickY };
-            } else if (matchState === GAME_STATES.PLAY_OVER) {
-                setupSnapPlay();
-            }
-        }
-
-        function handleMove(cx, cy) {
-            if (!isDragging) return;
-            let rect = canvas.getBoundingClientRect();
-            dragCurrent = { x: cx - rect.left, y: cy - rect.top };
-        }
-
-        function handleEnd() {
-            if (isDragging && matchState === GAME_STATES.PASSING) {
-                isDragging = false;
-                throwPass();
-            }
-        }
-
-        function throwPass() {
-            let dx = dragStart.x - dragCurrent.x;
-            let dy = dragStart.y - dragCurrent.y;
-
-            if (dx < 12) return; // Misfire threshold
-
-            matchState = GAME_STATES.BALL_IN_AIR;
-            qbEntity.hasBall = false;
-
-            ball.x = qbEntity.x;
-            ball.y = qbEntity.y;
-            ball.z = 12;
-            ball.airborne = true;
-
-            let power = Math.min(Math.hypot(dx, dy) * 0.085, 13);
-            let angle = Math.atan2(dy, dx);
-
-            ball.vx = Math.cos(angle) * power;
-            ball.vy = Math.sin(angle) * power;
-            ball.vz = power * 0.75;
-
-            ball.targetX = ball.x + ball.vx * 36;
-            ball.targetY = ball.y + ball.vy * 36;
-
-            playSound('throw');
-        }
-
-        function updatePhysics() {
-            let focusX = ball.airborne ? ball.x : (ballCarrierEntity ? ballCarrierEntity.x : qbEntity.x);
-            cameraX = Math.max(0, focusX - 250);
-
-            if (matchState === GAME_STATES.PASSING) {
-                receivers.forEach(r => r.update());
-                defenders.forEach(d => d.update());
-            } else if (matchState === GAME_STATES.BALL_IN_AIR) {
-                ball.x += ball.vx;
-                ball.y += ball.vy;
-                ball.z += ball.vz;
-                ball.vz -= 0.45; // Gravity
-
-                receivers.forEach(r => r.update());
-                defenders.forEach(d => d.update());
-
-                if (ball.z <= 0) {
-                    ball.z = 0;
-                    ball.airborne = false;
-
-                    let caught = false;
-                    receivers.forEach(r => {
-                        if (Math.hypot(r.x - ball.x, r.y - ball.y) < 32) {
-                            caught = true;
-                            r.hasBall = true;
-                            ballCarrierEntity = r;
-                            matchState = GAME_STATES.RUNNING;
-                            playSound('catch');
+                for (let r = 0; r < shape.length; r++) {
+                    for (let c = 0; c < shape[r].length; c++) {
+                        if (shape[r][c]) {
+                            this.drawBlock(ctx, c, r, piece.color, false, size);
                         }
-                    });
-
-                    if (!caught) {
-                        endPlay(false, "INCOMPLETE");
                     }
                 }
-            } else if (matchState === GAME_STATES.RUNNING) {
-                ballCarrierEntity.update();
-                defenders.forEach(d => {
-                    d.update();
-                    if (Math.hypot(d.x - ballCarrierEntity.x, d.y - ballCarrierEntity.y) < 15) {
-                        playSound('tackle');
-                        ballCarrierEntity.tackled = true;
-                        endPlay(true, "TACKLED");
+            }
+
+            render() {
+                // Clear Main Canvas
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                // Draw Background Grid Lines
+                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+                this.ctx.lineWidth = 1;
+                for (let r = 0; r < ROWS; r++) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, r * BLOCK_SIZE);
+                    this.ctx.lineTo(this.canvas.width, r * BLOCK_SIZE);
+                    this.ctx.stroke();
+                }
+                for (let c = 0; c < COLS; c++) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(c * BLOCK_SIZE, 0);
+                    this.ctx.lineTo(c * BLOCK_SIZE, this.canvas.height);
+                    this.ctx.stroke();
+                }
+
+                // Draw Locked Board Blocks
+                for (let r = 0; r < ROWS; r++) {
+                    for (let c = 0; c < COLS; c++) {
+                        if (this.grid[r][c]) {
+                            this.drawBlock(this.ctx, c, r, this.grid[r][c]);
+                        }
                     }
+                }
+
+                // Draw Ghost & Active Piece
+                if (this.currentPiece && !this.isGameOver) {
+                    const ghost = this.getGhostPosition();
+                    for (let r = 0; r < ghost.shape.length; r++) {
+                        for (let c = 0; c < ghost.shape[r].length; c++) {
+                            if (ghost.shape[r][c]) {
+                                this.drawBlock(this.ctx, ghost.x + c, ghost.y + r, ghost.color, true);
+                            }
+                        }
+                    }
+
+                    for (let r = 0; r < this.currentPiece.shape.length; r++) {
+                        for (let c = 0; c < this.currentPiece.shape[r].length; c++) {
+                            if (this.currentPiece.shape[r][c]) {
+                                this.drawBlock(this.ctx, this.currentPiece.x + c, this.currentPiece.y + r, this.currentPiece.color);
+                            }
+                        }
+                    }
+                }
+
+                // Draw Side Previews
+                this.drawPreview(this.nextCtx, this.nextPiece);
+                this.drawPreview(this.holdCtx, this.holdPiece);
+
+                // Update particles
+                this.particleEngine.updateAndDraw();
+            }
+
+            update(time = 0) {
+                const deltaTime = time - this.lastTime;
+                this.lastTime = time;
+
+                if (!this.isPaused && !this.isGameOver) {
+                    this.dropCounter += deltaTime;
+                    if (this.dropCounter > this.dropInterval) {
+                        this.softDrop();
+                        this.dropCounter = 0;
+                    }
+                }
+
+                this.render();
+                requestAnimationFrame(this.update.bind(this));
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const game = new TetrisGame();
+            game.start();
+            requestAnimationFrame(game.update.bind(game));
+
+            // User input initialization for Audio Context
+            const initAudioOnUserAction = () => {
+                audio.init();
+                window.removeEventListener('keydown', initAudioOnUserAction);
+                window.removeEventListener('touchstart', initAudioOnUserAction);
+            };
+            window.addEventListener('keydown', initAudioOnUserAction);
+            window.addEventListener('touchstart', initAudioOnUserAction);
+
+            // Keyboard Controls
+            window.addEventListener('keydown', (e) => {
+                if (game.isGameOver) return;
+
+                if (e.key === 'p' || e.key === 'P') {
+                    togglePause();
+                    return;
+                }
+
+                if (game.isPaused) return;
+
+                switch (e.key) {
+                    case 'ArrowLeft':
+                        game.moveLeft();
+                        break;
+                    case 'ArrowRight':
+                        game.moveRight();
+                        break;
+                    case 'ArrowDown':
+                        game.softDrop();
+                        break;
+                    case 'ArrowUp':
+                    case 'x':
+                    case 'X':
+                        game.rotate(true);
+                        break;
+                    case 'z':
+                    case 'Z':
+                        game.rotate(false);
+                        break;
+                    case ' ':
+                        e.preventDefault();
+                        game.hardDrop();
+                        break;
+                    case 'c':
+                    case 'C':
+                    case 'Shift':
+                        game.hold();
+                        break;
+                    case 'r':
+                    case 'R':
+                        game.start();
+                        break;
+                }
+            });
+
+            // Pause Handler
+            function togglePause() {
+                if (game.isGameOver) return;
+                game.isPaused = !game.isPaused;
+                const overlay = document.getElementById('pauseOverlay');
+                const pauseIcon = document.getElementById('pauseIcon');
+                if (game.isPaused) {
+                    overlay.classList.remove('hidden');
+                    pauseIcon.className = 'fa-solid fa-play';
+                } else {
+                    overlay.classList.add('hidden');
+                    pauseIcon.className = 'fa-solid fa-pause';
+                }
+            }
+
+            // Header Button Listeners
+            document.getElementById('pauseBtn').addEventListener('click', togglePause);
+            document.getElementById('resumeBtn').addEventListener('click', togglePause);
+            document.getElementById('restartBtn').addEventListener('click', () => game.start());
+            document.getElementById('playAgainBtn').addEventListener('click', () => game.start());
+
+            document.getElementById('audioBtn').addEventListener('click', () => {
+                audio.muted = !audio.muted;
+                const icon = document.getElementById('audioIcon');
+                icon.className = audio.muted ? 'fa-solid fa-volume-xmark' : 'fa-solid fa-volume-high';
+            });
+
+            // Mobile Touch Button Listeners
+            const setupTouchBtn = (id, action) => {
+                const btn = document.getElementById(id);
+                if (!btn) return;
+                btn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    if (!game.isPaused && !game.isGameOver) action();
                 });
-
-                let currentYard = (ballCarrierEntity.x / YARD_PX) - 10;
-                if (currentYard >= 100) {
-                    playSound('td');
-                    userScore += 6;
-                    endPlay(true, "TOUCHDOWN!");
-                }
-            }
-        }
-
-        function endPlay(gainedYardage, msg) {
-            matchState = GAME_STATES.PLAY_OVER;
-
-            let endYard = gainedYardage ? Math.floor((ballCarrierEntity.x / YARD_PX) - 10) : lineOfScrimmage;
-            if (msg === "TOUCHDOWN!") {
-                triggerCPUDefenseSim();
-                return;
-            }
-
-            lineOfScrimmage = Math.max(1, Math.min(99, endYard));
-
-            if (lineOfScrimmage >= firstDownLine) {
-                down = 1;
-                yardsToGo = Math.min(10, 100 - lineOfScrimmage);
-                firstDownLine = lineOfScrimmage + yardsToGo;
-            } else {
-                down++;
-                yardsToGo = firstDownLine - lineOfScrimmage;
-                if (down > 4) {
-                    // Turnover on downs
-                    triggerCPUDefenseSim();
-                }
-            }
-
-            updateHUD();
-        }
-
-        function triggerCPUDefenseSim() {
-            document.getElementById('sim-overlay').classList.remove('hidden');
-            let progress = 0;
-            const progressBar = document.getElementById('sim-progress-bar');
-            const ticker = document.getElementById('sim-ticker');
-
-            const simInterval = setInterval(() => {
-                progress += 25;
-                progressBar.style.width = `${progress}%`;
-
-                if (progress === 25) {
-                    ticker.textContent = "Opponent starting drive at 25 Yd line...";
-                } else if (progress === 50) {
-                    ticker.textContent = "Opponent completes 18 Yd pass across middle!";
-                } else if (progress === 75) {
-                    ticker.textContent = "Defense stops 3rd down run short of line!";
-                } else if (progress >= 100) {
-                    clearInterval(simInterval);
-                    
-                    // Simulate Opponent Drive outcome based on team def stars
-                    let oppScoreGained = Math.random() > 0.45 ? 7 : 3;
-                    oppScore += oppScoreGained;
-                    
-                    document.getElementById('sim-overlay').classList.add('hidden');
-                    lineOfScrimmage = 20;
-                    down = 1;
-                    yardsToGo = 10;
-                    firstDownLine = 30;
-                    
-                    playSound('whistle');
-                    setupSnapPlay();
-                }
-            }, 600);
-        }
-
-        function startKickingMinigame() {
-            matchState = GAME_STATES.KICKING;
-            document.getElementById('playbook-overlay').classList.add('hidden');
-            document.getElementById('kicking-overlay').classList.remove('hidden');
-            
-            let dist = 100 - lineOfScrimmage + 17;
-            document.getElementById('kicking-dist-text').textContent = `Distance: ${dist} Yards`;
-            
-            kickAimPos = 0;
-            kickPower = 0;
-            kickStep = 0;
-            document.getElementById('btn-kick-action').textContent = "SET AIM";
-        }
-
-        function handleKickPress() {
-            if (kickStep === 0) {
-                kickStep = 1;
-                document.getElementById('btn-kick-action').textContent = "KICK BALL!";
-            } else if (kickStep === 1) {
-                // Execute Kick
-                playSound('kick');
-                document.getElementById('kicking-overlay').classList.add('hidden');
-                
-                if (Math.abs(kickAimPos - 50) < 22 && kickPower > 40) {
-                    userScore += 3;
-                    playSound('td');
-                }
-                triggerCPUDefenseSim();
-            }
-        }
-
-        function updateKickingMinigame() {
-            if (matchState !== GAME_STATES.KICKING) return;
-
-            if (kickStep === 0) {
-                kickAimPos += kickAimSpeed;
-                if (kickAimPos > 100 || kickAimPos < 0) kickAimSpeed *= -1;
-                document.getElementById('kick-aim-needle').style.left = `${kickAimPos}%`;
-            } else if (kickStep === 1) {
-                kickPower += kickPowerSpeed;
-                if (kickPower > 100 || kickPower < 0) kickPowerSpeed *= -1;
-                document.getElementById('kick-power-bar').style.width = `${kickPower}%`;
-            }
-        }
-
-        function updateHUD() {
-            let opp = getNextOpponent();
-            document.getElementById('hud-home-score').textContent = userScore;
-            document.getElementById('hud-away-score').textContent = oppScore;
-            document.getElementById('hud-away-team').textContent = opp.id;
-
-            let downStr = ["1ST", "2ND", "3RD", "4TH"][down - 1] || "1ST";
-            document.getElementById('hud-down').textContent = `${downStr} & ${yardsToGo}`;
-            document.getElementById('hud-ball-pos').textContent = `AT BOS ${lineOfScrimmage}`;
-        }
-
-        function drawField() {
-            ctx.fillStyle = '#20663f';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            for (let y = 0; y <= 120; y += 5) {
-                let px = (y * YARD_PX) - cameraX;
-                if (y % 10 === 0) {
-                    ctx.fillStyle = '#278d46';
-                    ctx.fillRect(px, FIELD_TOP, YARD_PX * 5, FIELD_HEIGHT);
-                }
-            }
-
-            let leftEz = (0 * YARD_PX) - cameraX;
-            let rightEz = (110 * YARD_PX) - cameraX;
-
-            ctx.fillStyle = '#1d4ed8'; ctx.fillRect(leftEz, FIELD_TOP, YARD_PX * 10, FIELD_HEIGHT);
-            ctx.fillStyle = '#b91c1c'; ctx.fillRect(rightEz, FIELD_TOP, YARD_PX * 10, FIELD_HEIGHT);
-
-            ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
-            for (let y = 10; y <= 110; y += 5) {
-                let px = (y * YARD_PX) - cameraX;
-                ctx.beginPath(); ctx.moveTo(px, FIELD_TOP); ctx.lineTo(px, FIELD_BOTTOM); ctx.stroke();
-            }
-
-            let losPx = ((lineOfScrimmage + 10) * YARD_PX) - cameraX;
-            let fdPx = ((firstDownLine + 10) * YARD_PX) - cameraX;
-
-            ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 3;
-            ctx.beginPath(); ctx.moveTo(losPx, FIELD_TOP); ctx.lineTo(losPx, FIELD_BOTTOM); ctx.stroke();
-
-            ctx.strokeStyle = '#3498db'; ctx.lineWidth = 3;
-            ctx.beginPath(); ctx.moveTo(fdPx, FIELD_TOP); ctx.lineTo(fdPx, FIELD_BOTTOM); ctx.stroke();
-        }
-
-        function drawRoutesAndAiming() {
-            if (matchState === GAME_STATES.PRE_SNAP || matchState === GAME_STATES.PASSING) {
-                receivers.forEach(r => {
-                    ctx.strokeStyle = 'rgba(241, 196, 15, 0.8)';
-                    ctx.lineWidth = 2;
-                    ctx.setLineDash([6, 4]);
-                    ctx.beginPath();
-                    ctx.moveTo(r.x - cameraX, r.y);
-                    r.route.forEach(pt => ctx.lineTo(pt.x - cameraX, pt.y));
-                    ctx.stroke();
-                    ctx.setLineDash([]);
+                btn.addEventListener('click', () => {
+                    if (!game.isPaused && !game.isGameOver) action();
                 });
-            }
+            };
 
-            if (isDragging && matchState === GAME_STATES.PASSING) {
-                let dx = dragStart.x - dragCurrent.x;
-                let dy = dragStart.y - dragCurrent.y;
-                let power = Math.min(Math.hypot(dx, dy) * 0.085, 13);
-                let angle = Math.atan2(dy, dx);
-
-                let vx = Math.cos(angle) * power;
-                let vy = Math.sin(angle) * power;
-
-                ctx.fillStyle = '#e74c3c';
-                for (let i = 1; i <= 15; i++) {
-                    let dotX = (qbEntity.x + vx * i * 2.5) - cameraX;
-                    let dotY = qbEntity.y + vy * i * 2.5;
-                    ctx.beginPath();
-                    ctx.arc(dotX, dotY, 3, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-            }
-        }
-
-        function drawBall() {
-            if (matchState === GAME_STATES.PRE_SNAP || matchState === GAME_STATES.PASSING || matchState === GAME_STATES.RUNNING) return;
-
-            let px = ball.x - cameraX;
-            let py = ball.y - ball.z;
-
-            ctx.fillStyle = 'rgba(0,0,0,0.4)';
-            ctx.beginPath(); ctx.ellipse(ball.x - cameraX, ball.y, 5, 3, 0, 0, Math.PI * 2); ctx.fill();
-
-            ctx.fillStyle = '#8b4513';
-            ctx.beginPath(); ctx.ellipse(px, py, 6, 4, 0.4, 0, Math.PI * 2); ctx.fill();
-        }
-
-        function mainLoop() {
-            if (!document.getElementById('view-GAME').classList.contains('hidden')) {
-                updatePhysics();
-                updateKickingMinigame();
-
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                drawField();
-                drawRoutesAndAiming();
-
-                receivers.forEach(r => r.draw());
-                defenders.forEach(d => d.draw());
-                if (qbEntity) qbEntity.draw();
-                drawBall();
-            }
-            requestAnimationFrame(mainLoop);
-        }
-
-        window.onload = function() {
-            generateSchedule();
-            switchTab('OFFICE');
-            mainLoop();
-        };
-
-        // Automatic focus fix for Google Apps Script & Chromebook iframes
-        window.focus();
-        document.addEventListener('click', () => {
-            window.focus();
+            setupTouchBtn('btnLeft', () => game.moveLeft());
+            setupTouchBtn('btnRight', () => game.moveRight());
+            setupTouchBtn('btnRotCW', () => game.rotate(true));
+            setupTouchBtn('btnRotCCW', () => game.rotate(false));
+            setupTouchBtn('btnSoftDrop', () => game.softDrop());
+            setupTouchBtn('btnHardDrop', () => game.hardDrop());
+            setupTouchBtn('btnHold', () => game.hold());
         });
+        // Auto-focus window so controls work immediately
+window.focus();
+
+document.addEventListener('click', () => {
+    window.focus();
+});
     </script>
 </body>
 </html>
